@@ -1,5 +1,5 @@
 import torch
-from qtorch import Number, FixedPoint, BlockFloatingPoint, FloatingPoint, Posit
+from qtorch import Number, FixedPoint, BlockFloatingPoint, FloatingPoint, Posit, FixedPosit
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -30,6 +30,8 @@ if torch.cuda.is_available():
             os.path.join(current_path, "quant_cuda/fixed_point_kernel.cu"),
             os.path.join(current_path, "quant_cuda/quant.cu"),
             os.path.join(current_path, "quant_cuda/posit_kernel.cu"),
+            os.path.join(current_path, "quant_cuda/fixedposit_kernel.cu"),
+            
         ],
     verbose=True,
     )
@@ -317,6 +319,32 @@ def posit_quantize(x, nsize, es, scale = 1.0, rounding="nearest"):
         - :attr: `rounding` (string) : rounding mode, \"stochastic\" or \"nearest\"
         - default rounding: `nearest` because it is easier to implement on hardware
         - conventional: posit(8,2): 8 bits posit with 2 bits exponent es
+
+    Returns:
+        - a quantized low-precision posit tensor (torch.Tensor)
+    """
+    assert isinstance(x, torch.Tensor), "x is not a single precision Floating Point Tensor"
+    assert rounding in ["stochastic", "nearest"], "invalid rounding mode, {}".format(rounding)
+    quant_module = get_module(x)
+    if rounding == "nearest":
+        out = quant_module.posit_quantize_nearest(x.contiguous(), nsize, es, scale)
+    elif rounding == "stochastic":
+        out = quant_module.posit_quantize_nearest(x.contiguous(), nsize, es, scale) #todo; temporarily use nearest rounding at all time
+    return out
+
+
+def FixedPosit_quantize(x, nsize, es, rf, scale = 1.0, rounding="nearest"):
+    """
+    Quantize a single precision Floating Point into low-precision Floating Point
+
+    Args:
+        - :attr: `x` (torch.Tensor) : the single precision number(torch.Tensor) to be quantized
+        - :attr: `nsize` (int) : number of bits allocated for the posit format
+        - :attr: `es` (int) : number of bits allocated for es field (exponent)
+        - :attr: `rf` (int) : number of bits allocated for the regime bits
+        - :attr: `rounding` (string) : rounding mode, \"stochastic\" or \"nearest\"
+        - default rounding: `nearest` because it is easier to implement on hardware
+        - conventional: fixedposit(16,2,2): 16 bits fixed posit with 2 bits exponent es and 2 bits regime
 
     Returns:
         - a quantized low-precision posit tensor (torch.Tensor)
