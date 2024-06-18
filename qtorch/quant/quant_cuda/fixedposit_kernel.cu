@@ -219,6 +219,10 @@ __device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
     return Fp;
 }
 
+__device__ fp16 compute_sigmoid(fp16 fp) {
+    fp ^= 0x8000;
+    return fp >> 2;
+}
 
 __global__ void fixed_posit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
 {
@@ -538,14 +542,14 @@ void configurable_quantize_kernel_rounding_hint_wrapper(float *__restrict__ a,
 }
 
 void tanh_kernel_wrapper(float *__restrict__ a,
-                         float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                         float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
+    generate_posit_constants(nsize, 0, rf,int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     tanh_kernel<<<blockNums, blockSize>>>(a,
@@ -555,14 +559,14 @@ void tanh_kernel_wrapper(float *__restrict__ a,
 }
 
 void sigmoid_kernel_wrapper(float *__restrict__ a,
-                            float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                            float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
+    generate_posit_constants(nsize, 0, rf, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     sigmoid_kernel<<<blockNums, blockSize>>>(a,
@@ -572,14 +576,14 @@ void sigmoid_kernel_wrapper(float *__restrict__ a,
 }
 
 void tanh_enhanced_kernel_wrapper(float *__restrict__ a,
-                                  float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                                  float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
     generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     tanh_enhanced_kernel<<<blockNums, blockSize>>>(a,
