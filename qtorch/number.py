@@ -1,4 +1,4 @@
-__all__ = ["Number", "FixedPoint", "BlockFloatingPoint", "FloatingPoint", "Posit"]
+__all__ = ["Number", "FixedPoint", "BlockFloatingPoint", "FloatingPoint", "Posit","FixedPosit"]
 
 
 class Number:
@@ -128,7 +128,34 @@ class Posit(Number):
     def __repr__(self):
         return "Posit (exponent={:d}, wordlength={:d}, scale={:d})".format(self.es, self.nsize, self.scale)
 
-    
+class FixedPosit(Number):
+    """
+    Low-Precision FixedPosit Format.
+    TODO: Description here
+
+    Args:
+        - :attr: `nsize`: number of bits allocated for the format
+        - :attr: `es`: number of bits allocated for exponent
+        - :attr: `rf`: number of bits allocated for regime field
+        - :attr: `scale`: the scale used for rounding. # explain later
+    """
+
+    def __init__(self, nsize, es, rf, scale=1.0):
+        assert 3 >= es > 0, "invalid bits for exponent:{}".format(es)
+        assert 16 >= nsize > 0, "invalid bits for wordlength:{}".format(nsize)
+        assert 4>= rf > 0, "ivalid bits for regime field:{}".format(rf)
+        
+        self.nsize = nsize
+        self.es = es
+        self.rf = rf
+        self.scale = scale
+
+    def __str__(self):
+        return "Posit (exponent={:d}, regimebits={:d}, wordlength={:d}, scale={:d})".format(self.es, self.rf, self.nsize, self.scale)
+
+    def __repr__(self):
+        return "Posit (exponent={:d}, regimebits={:d}, wordlength={:d}, scale={:d})".format(self.es, self.rf, self.nsize, self.scale)
+
     
     
 class BlockFloatingPoint(Number):
