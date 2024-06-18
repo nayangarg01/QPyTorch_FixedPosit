@@ -122,7 +122,7 @@ void generate_fposit_constants(int nsize, int es, int rf, uint32_t *int32_consta
     }
 };
 
-__device__ __inline__ float fp16tofp32_gpu(fp16 Fp)
+__device__ __inline__ float fixedp16tofp32_gpu(fp16 Fp)
 {
     union Bits v;
     // printf("the fraction is: %d \n", Fp);
@@ -153,7 +153,7 @@ __device__ __inline__ float fp16tofp32_gpu(fp16 Fp)
     return v.f;
 }
 
-__device__ __inline__ fp16 fp32tofp16_gpu(float f)
+__device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
 {
     fp16 Fp = 0; // initiallising a 16 bit space for the posit
     // printf("FP is : %d \n",Fp);
@@ -220,15 +220,15 @@ __device__ __inline__ fp16 fp32tofp16_gpu(float f)
 }
 
 
-__global__ void posit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
+__global__ void FixedPosit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
 {
     const int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < input_size)
     {
         float temp_input = input[index] * scale;
 
-        fp16 temp = fp32tofp16_gpu(temp_input);
-        temp_input = fp16tofp32_gpu(temp);
+        fp16 temp = fp32tofixedp16_gpu(temp_input);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         output[index] = temp_input / scale;
     }
@@ -407,11 +407,11 @@ __global__ void sigmoid_kernel(float *input, float *output, float scale, size_t 
     {
         float temp_input = input[index]; //*scale; //unused scale val
 
-        fp16 temp = fp32tofp16_gpu(temp_input);
+        fp16 temp = fp32tofixedp16_gpu(temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         output[index] = temp_input; /// scale;
     }
@@ -424,11 +424,11 @@ __global__ void tanh_kernel(float *input, float *output, float scale, size_t inp
     {
         float temp_input = input[index]; //*scale; //unused scale val
 
-        fp16 temp = fp32tofp16_gpu(2 * temp_input);
+        fp16 temp = fp32tofixedp16_gpu(2 * temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         temp_input = temp_input * 2 - 1;
 
@@ -444,11 +444,11 @@ __global__ void tanh_enhanced_kernel(float *input, float *output, float scale, s
         float temp_input = input[index]; //*scale; //unused scale val
 
         // tanh(x)=2g(2x)−1
-        fp16 temp = fp32tofp16_gpu(2 * temp_input);
+        fp16 temp = fp32tofixedp16_gpu(2 * temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         temp_input = temp_input * 2 - 1;
 
