@@ -106,7 +106,9 @@ void generate_fixedposit_constants(int nsize, int es, int rf, uint32_t *int32_co
         _G_MAXREAL_INT = ((((1 << rf) - 1 - _FP_REGIME_BIAS) * (_G_USEED_ZEROS)) + ((1 << es) - 1)) << FLOAT_EXPONENT_SHIFT;
         // _G_MAXREAL_INT = ((_G_USEED_ZEROS * (nsize - 2)) + SINGLE_PRECISION_BIAS) << FLOAT_EXPONENT_SHIFT;
         // this is the maximum float integer that can be represented by the fixed posit.
-        _G_MINREAL_INT = (-1 * (_FP_REGIME_BIAS) * (_G_USEED_ZEROS)) << FLOAT_EXPONENT_SHIFT;
+        int32_constants[8] = (int32_t)(-1 * ((int32_t)int32_constants[15]) * ((int32_t)int32_constants[5])) << 23;
+
+        //_G_MINREAL_INT = (-1 * (_FP_REGIME_BIAS) * (_G_USEED_ZEROS)) << FLOAT_EXPONENT_SHIFT;
         // _G_MINREAL_INT = ((_G_USEED_ZEROS * (2 - nsize)) + SINGLE_PRECISION_BIAS) << FLOAT_EXPONENT_SHIFT;
         // this is the minimum float integer that can be represented by the fixed posit.
         FPOSIT_REGIME_MASK = ((1 << rf) - 1) << (_G_FSIZE + _G_ESIZE);
@@ -212,7 +214,9 @@ __device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
     // printf("the current minreal_int value is: %d \n", _G_MINREAL_INT);
     // Fp =  (v.f < (-1*_G_MINREAL_INT));
     // printf("the current output value is: %d \n", Fp);
-    Fp ^= (temp_p ^ Fp) & -((v.f < _G_MAXREAL_INT) & (v.f < (-1 * _G_MINREAL_INT)));
+    //Fp ^= (temp_p ^ Fp) & -((v.f < _G_MAXREAL_INT) & (v.f < (-1 * _G_MINREAL_INT)));
+    Fp ^= (temp_p ^ Fp) & -((v.f < (float)int32_constants[7]) & (v.f < (-1 * (float)((int32_t)int32_constants[8]))));
+
     // printf("the current output value is: %d \n", Fp);
     Fp = (Fp ^ -sign) + sign;
     printf("result from the fp32 to fixed posit 16 function-----> the current output value is: %d \n", Fp);
@@ -412,7 +416,7 @@ void fixed_posit_kernel_nearest_wrapper(float *__restrict__ a,
     cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
-    posit_kernel_nearest<<<blockNums, blockSize>>>(a,
+    fixed_posit_kernel_nearest<<<blockNums, blockSize>>>(a,
                                                    o,
                                                    scale,
                                                    size);
@@ -470,4 +474,5 @@ void configurable_quantize_kernel_rounding_hint_wrapper(float *__restrict__ a,
                                                                          size,
                                                                          table_size);
 }
+
 
