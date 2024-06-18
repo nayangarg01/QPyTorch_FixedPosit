@@ -148,6 +148,25 @@ Tensor posit_quantize_nearest_cuda(Tensor a, int nsize, int es, float scale) {
   return o;
 }
 
+Tensor fixed_posit_quantize_nearest_cuda(Tensor a, int nsize, int es, int rf, float scale) {
+
+  auto o = zeros_like(a);
+  int size = a.numel();
+  int blockSize = 1024;
+  int blockNums = (size + blockSize - 1) / blockSize;
+
+  posit_kernel_nearest_wrapper (a.data_ptr<float>(),
+                                 o.data_ptr<float>(),
+                                           size, nsize, es, rf, scale ,
+                                            blockNums,
+                                            blockSize
+                                          );
+
+
+
+  return o;
+}
+
 Tensor newformat_quantize_nearest_cuda(Tensor a, float scale) {
 
   auto o = zeros_like(a);

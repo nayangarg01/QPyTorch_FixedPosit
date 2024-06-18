@@ -86,6 +86,8 @@ Tensor float_quantize_nearest_cuda(Tensor a, int man_bits, int exp_bits);
  **/
 Tensor posit_quantize_nearest_cuda(Tensor a, int nsize, int es, float scale);
 
+Tensor fixed_posit_quantize_nearest_cuda(Tensor a, int nsize, int es, int rf, float scale);
+
 Tensor newformat_quantize_nearest_cuda(Tensor a, float scale);
 
 Tensor actformat_quantize_nearest_cuda(Tensor a, float scale);
