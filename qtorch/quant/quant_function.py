@@ -38,7 +38,7 @@ if torch.cuda.is_available():
 else:
     quant_cuda = quant_cpu
 
-__all__ = ["fixed_point_quantize", "block_quantize", "float_quantize", "quantizer", "posit_quantize", "posit_sigmoid", "posit_tanh", "posit_tanh_enhanced", "new_format_quantize", "act_format_quantize", "configurable_table_quantize", "configurable_table_quantize_rounding_hint", "configurable_table_quantize_geomean"]
+__all__ = ["fixed_point_quantize", "block_quantize", "float_quantize", "quantizer", "posit_quantize", "FixedPosit_quantize" , "posit_sigmoid", "posit_tanh", "posit_tanh_enhanced", "new_format_quantize", "act_format_quantize", "configurable_table_quantize", "configurable_table_quantize_rounding_hint", "configurable_table_quantize_geomean"]
 
 
 def assert_wl_fl(wl, fl, stage=""):
@@ -105,6 +105,10 @@ def quantizer(
                 forward_quant = lambda x, quant_module: quant_module.posit_quantize_nearest(
                     x, forward_number.nsize, forward_number.es, forward_number.scale
                 )
+            elif type(forward_number) == FixedPosit:
+                forward_quant = lambda x, quant_module: quant_module.fixed_posit_quantize_nearest(
+                    x, forward_number.nsize, forward_number.es, forward_number.rf, forward_number.scale
+                )
         elif forward_rounding == "stochastic":
             if type(forward_number) == BlockFloatingPoint:
                 forward_quant = lambda x, quant_module: quant_module.block_quantize_stochastic(
@@ -121,6 +125,10 @@ def quantizer(
             elif type(forward_number) == Posit:
                 forward_quant = lambda x, quant_module: quant_module.posit_quantize_nearest(
                     x, forward_number.nsize, forward_number.es, forward_number.scale
+                )
+            elif type(forward_number) == FixedPosit:
+                forward_quant = lambda x, quant_module: quant_module.fixed_posit_quantize_nearest(
+                    x, forward_number.nsize, forward_number.es, forward_number.rf, forward_number.scale
                 )
     else:
         if type(forward_number) == FixedPoint or forward_number == None:
@@ -155,6 +163,11 @@ def quantizer(
             backward_quant = lambda a, quant_module: quant_module.posit_quantize_nearest(
                 a, backward_number.nsize, backward_number.es, backward_number.scale
             )
+        elif type(backward_number) == FixedPosit:
+            backward_quant = lambda a, quant_module: quant_module.fixed_posit_quantize_nearest(
+                a, backward_number.nsize, backward_number.es, backward_number.rf, backward_number.scale
+            )
+        
 
     elif backward_rounding == "stochastic":
         if type(backward_number) == BlockFloatingPoint:
@@ -173,7 +186,10 @@ def quantizer(
             backward_quant = lambda a, quant_module: quant_module.posit_quantize_nearest(
                 a, backward_number.nsize, backward_number.es, backward_number.scale
             )
-
+        elif type(backward_number) == FixedPosit:
+            backward_quant = lambda a, quant_module: quant_module.fixed_posit_quantize_nearest(
+                a, backward_number.nsize, backward_number.es, backward_number.rf, backward_number.scale
+            )
     if clamping_grad_zero == False:
 
         class Rounding(torch.autograd.Function):
@@ -333,7 +349,7 @@ def posit_quantize(x, nsize, es, scale = 1.0, rounding="nearest"):
     return out
 
 
-def FixedPosit_quantize(x, nsize, es, rf, scale = 1.0, rounding="nearest"):
+def fixed_posit_quantize(x, nsize, es, rf, scale = 1.0, rounding="nearest"):
     """
     Quantize a single precision Floating Point into low-precision Floating Point
 
@@ -353,9 +369,9 @@ def FixedPosit_quantize(x, nsize, es, rf, scale = 1.0, rounding="nearest"):
     assert rounding in ["stochastic", "nearest"], "invalid rounding mode, {}".format(rounding)
     quant_module = get_module(x)
     if rounding == "nearest":
-        out = quant_module.posit_quantize_nearest(x.contiguous(), nsize, es, scale)
+        out = quant_module.fixed_posit_quantize_nearest(x.contiguous(), nsize, es, rf, scale)
     elif rounding == "stochastic":
-        out = quant_module.posit_quantize_nearest(x.contiguous(), nsize, es, scale) #todo; temporarily use nearest rounding at all time
+        out = quant_module.fixed_posit_quantize_nearest(x.contiguous(), nsize, es, rf, scale) #todo; temporarily use nearest rounding at all time
     return out
 
 def posit_sigmoid(x, nsize, es=0, scale = 1.0, rounding="nearest"):
