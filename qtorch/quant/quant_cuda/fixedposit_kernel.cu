@@ -81,7 +81,7 @@ typedef FP32_TYPE fp32;
 #define FPOSIT_EXTRA_BITS_MASK int64_constants[0]
 #define FPOSIT_HALFWAY_BIT_MASK int64_constants[1]
 
-void generate_fposit_constants(int nsize, int es, int rf, uint32_t *int32_constants, uint64_t *int64_constants)
+void generate_fixedposit_constants(int nsize, int es, int rf, uint32_t *int32_constants, uint64_t *int64_constants)
 {
     // local vars have the same name as global constant vars, confusing but less likely error can happen here.
     // ugly but it's the straightforward conversion from the original #define macroes;
@@ -220,7 +220,7 @@ __device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
 }
 
 
-__global__ void FixedPosit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
+__global__ void fixed_posit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
 {
     const int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < input_size)
@@ -467,15 +467,15 @@ __global__ void tanh_enhanced_kernel(float *input, float *output, float scale, s
     }
 }
 
-void posit_kernel_nearest_wrapper(float *__restrict__ a,
-                                  float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+void fixed_posit_kernel_nearest_wrapper(float *__restrict__ a,
+                                  float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, es, int32_constants_host, int64_constants_host);
+    generate_fixedposit_constants(nsize, es, rf, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     posit_kernel_nearest<<<blockNums, blockSize>>>(a,
