@@ -219,7 +219,7 @@ __device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
 
     // printf("the current output value is: %d \n", Fp);
     Fp = (Fp ^ -sign) + sign;
-    printf("result from the fp32 to fixed posit 16 function-----> the current output value is: %d \n", Fp);
+    // printf("result from the fp32 to fixed posit 16 function-----> the current output value is: %d \n", Fp);
     return Fp;
 }
 
