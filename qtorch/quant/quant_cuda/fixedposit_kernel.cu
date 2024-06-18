@@ -81,7 +81,7 @@ typedef FP32_TYPE fp32;
 #define FPOSIT_EXTRA_BITS_MASK int64_constants[0]
 #define FPOSIT_HALFWAY_BIT_MASK int64_constants[1]
 
-void generate_fposit_constants(int nsize, int es, int rf, uint32_t *int32_constants, uint64_t *int64_constants)
+void generate_fixedposit_constants(int nsize, int es, int rf, uint32_t *int32_constants, uint64_t *int64_constants)
 {
     // local vars have the same name as global constant vars, confusing but less likely error can happen here.
     // ugly but it's the straightforward conversion from the original #define macroes;
@@ -122,7 +122,7 @@ void generate_fposit_constants(int nsize, int es, int rf, uint32_t *int32_consta
     }
 };
 
-__device__ __inline__ float fp16tofp32_gpu(fp16 Fp)
+__device__ __inline__ float fixedp16tofp32_gpu(fp16 Fp)
 {
     union Bits v;
     // printf("the fraction is: %d \n", Fp);
@@ -153,7 +153,7 @@ __device__ __inline__ float fp16tofp32_gpu(fp16 Fp)
     return v.f;
 }
 
-__device__ __inline__ fp16 fp32tofp16_gpu(float f)
+__device__ __inline__ fp16 fp32tofixedp16_gpu(float f)
 {
     fp16 Fp = 0; // initiallising a 16 bit space for the posit
     // printf("FP is : %d \n",Fp);
@@ -219,16 +219,20 @@ __device__ __inline__ fp16 fp32tofp16_gpu(float f)
     return Fp;
 }
 
+__device__ fp16 compute_sigmoid(fp16 fp) {
+    fp ^= 0x8000;
+    return fp >> 2;
+}
 
-__global__ void posit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
+__global__ void fixed_posit_kernel_nearest(float *input, float *output, float scale, size_t input_size)
 {
     const int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < input_size)
     {
         float temp_input = input[index] * scale;
 
-        fp16 temp = fp32tofp16_gpu(temp_input);
-        temp_input = fp16tofp32_gpu(temp);
+        fp16 temp = fp32tofixedp16_gpu(temp_input);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         output[index] = temp_input / scale;
     }
@@ -407,11 +411,11 @@ __global__ void sigmoid_kernel(float *input, float *output, float scale, size_t 
     {
         float temp_input = input[index]; //*scale; //unused scale val
 
-        fp16 temp = fp32tofp16_gpu(temp_input);
+        fp16 temp = fp32tofixedp16_gpu(temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         output[index] = temp_input; /// scale;
     }
@@ -424,11 +428,11 @@ __global__ void tanh_kernel(float *input, float *output, float scale, size_t inp
     {
         float temp_input = input[index]; //*scale; //unused scale val
 
-        fp16 temp = fp32tofp16_gpu(2 * temp_input);
+        fp16 temp = fp32tofixedp16_gpu(2 * temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         temp_input = temp_input * 2 - 1;
 
@@ -444,11 +448,11 @@ __global__ void tanh_enhanced_kernel(float *input, float *output, float scale, s
         float temp_input = input[index]; //*scale; //unused scale val
 
         // tanh(x)=2g(2x)−1
-        fp16 temp = fp32tofp16_gpu(2 * temp_input);
+        fp16 temp = fp32tofixedp16_gpu(2 * temp_input);
 
         temp = compute_sigmoid(temp);
 
-        temp_input = fp16tofp32_gpu(temp);
+        temp_input = fixedp16tofp32_gpu(temp);
 
         temp_input = temp_input * 2 - 1;
 
@@ -467,15 +471,15 @@ __global__ void tanh_enhanced_kernel(float *input, float *output, float scale, s
     }
 }
 
-void posit_kernel_nearest_wrapper(float *__restrict__ a,
-                                  float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+void fixed_posit_kernel_nearest_wrapper(float *__restrict__ a,
+                                  float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, es, int32_constants_host, int64_constants_host);
+    generate_fixedposit_constants(nsize, es, rf, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     posit_kernel_nearest<<<blockNums, blockSize>>>(a,
@@ -538,14 +542,14 @@ void configurable_quantize_kernel_rounding_hint_wrapper(float *__restrict__ a,
 }
 
 void tanh_kernel_wrapper(float *__restrict__ a,
-                         float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                         float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
+    generate_posit_constants(nsize, 0, rf,int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     tanh_kernel<<<blockNums, blockSize>>>(a,
@@ -555,14 +559,14 @@ void tanh_kernel_wrapper(float *__restrict__ a,
 }
 
 void sigmoid_kernel_wrapper(float *__restrict__ a,
-                            float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                            float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
-    generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
+    generate_posit_constants(nsize, 0, rf, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     sigmoid_kernel<<<blockNums, blockSize>>>(a,
@@ -572,14 +576,14 @@ void sigmoid_kernel_wrapper(float *__restrict__ a,
 }
 
 void tanh_enhanced_kernel_wrapper(float *__restrict__ a,
-                                  float *o, int size, int nsize, int es, float scale, int blockNums, int blockSize)
+                                  float *o, int size, int nsize, int es, int rf, float scale, int blockNums, int blockSize)
 {
 
-    uint32_t int32_constants_host[11];
+    uint32_t int32_constants_host[16];
     uint64_t int64_constants_host[2];
     generate_posit_constants(nsize, 0, int32_constants_host, int64_constants_host);
 
-    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 11 * sizeof(uint32_t), 0);
+    cudaMemcpyToSymbol(int32_constants, &int32_constants_host[0], 16 * sizeof(uint32_t), 0);
     cudaMemcpyToSymbol(int64_constants, &int64_constants_host[0], 2 * sizeof(uint64_t), 0);
 
     tanh_enhanced_kernel<<<blockNums, blockSize>>>(a,
