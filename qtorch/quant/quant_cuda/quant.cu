@@ -155,7 +155,7 @@ Tensor fixed_posit_quantize_nearest_cuda(Tensor a, int nsize, int es, int rf, fl
   int blockSize = 1024;
   int blockNums = (size + blockSize - 1) / blockSize;
 
-  posit_kernel_nearest_wrapper (a.data_ptr<float>(),
+  fixed_posit_kernel_nearest_wrapper (a.data_ptr<float>(),
                                  o.data_ptr<float>(),
                                            size, nsize, es, rf, scale ,
                                             blockNums,
