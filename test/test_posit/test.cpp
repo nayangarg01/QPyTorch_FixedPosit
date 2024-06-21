@@ -306,8 +306,8 @@ fp16 fp32tofp16(float f,  uint32_t* int32_constants, uint64_t* int64_constants) 
 
 int main ()
 {
-  int nsize = 4;
-    int es=1;
+  int nsize = 10;
+    int es=2;
     float scale=1.0;
 
   uint32_t	int32_constants[ 11 ];
