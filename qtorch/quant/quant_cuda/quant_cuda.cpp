@@ -131,13 +131,6 @@ Tensor posit_quantize_stochastic(Tensor a, int nsize, int es, float scale)
   CHECK_INPUT(a);
   return posit_quantize_nearest_cuda(a, nsize, es, scale);
 }
-
-Tensor fixed_posit_quantize_stochastic(Tensor a, int nsize, int es, int rf, float scale)
-{
-  //todo: implement stochastic rounding
-  CHECK_INPUT(a);
-  return fixed_posit_quantize_nearest_cuda(a, nsize, es, rf, scale);
-}
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
 {
   m.def("fixed_point_quantize_stochastic", &fixed_point_quantize_stochastic, "Fixed Point Number Stochastic Quantization (CUDA)");
