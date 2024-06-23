@@ -92,7 +92,7 @@ void generate_fixedposit_constants(int nsize, int es, int rf, uint32_t *int32_co
     _G_RSIZE = rf;
     _G_FSIZE = nsize - es - rf - 1;
 
-    if (nsize <= 16 && rf <= 4)
+    if (nsize <= 16 && rf <= 6)
     {
         _G_FPOSIT_SHIFT_AMOUNT = FP16_LIMB_SIZE - nsize;
         // _G_MAXREALFP = ((1 << (nsize - 1)) - 1) << _G_FPOSIT_SHIFT_AMOUNT;
